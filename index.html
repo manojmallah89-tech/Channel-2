@@ -27,9 +27,8 @@
             background: #000;
             object-fit: contain;
         }
-        .shaka-spinner-container,
-        .shaka-spinner,
-        .shaka-spinner-svg {
+        /* स्पिनर को छुपाने के लिए */
+        .shaka-spinner-container, .shaka-spinner, .shaka-spinner-svg {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
@@ -57,6 +56,7 @@
             const container = document.querySelector('.shaka-video-container');
             const ui = new shaka.ui.Overlay(player, container, video);
 
+            // पुरानी थीम (पर्पल और गोल्ड) को बरकरार रखा गया है
             ui.configure({
                 controlPanelElements: [
                     'play_pause', 'time_and_duration', 'mute', 'volume',
@@ -67,16 +67,15 @@
                 seekBarColors: { base: 'gold', buffered: 'gold', played: 'gold' }
             });
 
-            // अपडेटेड DRM Keys
+            // आपकी नई DRM Keys और Stream Info यहाँ अपडेट की गई है
             let drmConfig = {
                 clearKeys: {
                     "965dc2ddb1d85138ad787999a7f30ca5": "859695076e67fe961836b564db6d689c"
                 }
             };
-
-            // अपडेटेड URL और Cookie
+            
+            let cookieHeader = "__hdnea__=st=1771486562~exp=1771572962~acl=/*~hmac=cf2f2e72bbd3a562758cb5cc6fc6e685a169899e366f6b460cd51d2ddf0085de";
             let streamUrl = "https://jiotvmblive.cdn.jio.com/bpk-tv/Star_Sports_HD1_BTS/output/index.mpd";
-            let cookieHeader = "__hdnea__=st=1771378562~exp=1771464962~acl=/*~hmac=637658f3ded9fab4136a8b09259f1f208afd98c184d8a4c8aadc03ad397f693b";
 
             player.configure({
                 drm: drmConfig,
@@ -85,13 +84,12 @@
                     bufferingGoal: 15,
                     rebufferingGoal: 2,
                     bufferBehind: 15,
-                    retryParameters: { timeout: 10000, maxAttempts: 5, baseDelay: 300, backoffFactor: 1.2 },
-                    segmentRequestTimeout: 8000,
-                    segmentPrefetchLimit: 2,
+                    retryParameters: { timeout: 10000, maxAttempts: 5 },
                     useNativeHlsOnSafari: true
                 }
             });
 
+            // नेटवर्किंग फ़िल्टर - नए Headers के साथ
             player.getNetworkingEngine().registerRequestFilter((type, request) => {
                 request.headers['Referer'] = 'https://jiotv.com/';
                 request.headers['Origin'] = 'https://jiotv.com/';
@@ -100,12 +98,13 @@
 
                 if ((type === shaka.net.NetworkingEngine.RequestType.MANIFEST || 
                      type === shaka.net.NetworkingEngine.RequestType.SEGMENT) && 
-                     request.uris[0] && !request.uris[0].includes('__hdnea=')) {
+                    request.uris[0] && !request.uris[0].includes('__hdnea=')) {
                     const separator = request.uris[0].includes('?') ? '&' : '?';
                     request.uris[0] += separator + cookieHeader;
                 }
             });
 
+            // ऑटोप्ले और साउंड सेटिंग्स
             const attemptAutoplay = async () => {
                 try {
                     video.muted = false;
@@ -116,18 +115,17 @@
                 }
             };
 
-            video.addEventListener('play', () => {
-                if (window.innerWidth <= 768) {
-                    container.requestFullscreen().catch(() => {});
-                }
-            }, { once: true });
-
             try {
                 await player.load(streamUrl);
                 await attemptAutoplay();
             } catch (error) {
-                console.error('Load error:', error);
+                console.error('Error loading stream:', error);
             }
+
+            // यूजर इंटरेक्शन पर साउंड चालू करना
+            ['click', 'touchstart'].forEach(event => {
+                document.addEventListener(event, () => { if(video.muted) video.muted = false; }, { once: true });
+            });
         });
     </script>
 </body>
